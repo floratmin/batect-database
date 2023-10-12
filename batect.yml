@@ -1,0 +1,42 @@
+containers:
+  build-env:
+    image: node:20.8.0-alpine3.17
+    volumes:
+      - local: .
+        container: /code
+        options: cached
+      - type: cache
+        name: node_modules
+        container: /code/node_modules
+    working_directory: /code
+  dbs:
+    image: postgres:alpine
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_PASSWORD: password
+      POSTGRES_USER: app
+      POSTGRES_DB: db
+tasks:
+  start-dev-db:
+    description: Start development database
+    run:
+      container: dbs
+  install-deps:
+    description: Install dependencies needed to build fastvite application
+    run:
+      container: build-env
+      command: npm install
+  start-server:
+    description: Run fastvite application
+    run:
+      environment:
+        PORT: 8080
+        HOST: 0.0.0.0
+        POSTGRES_URI: postgres://app:password@dbs/db
+      container: build-env
+      command: npm run serve
+      ports:
+        - 5000:8080
+    dependencies:
+      - dbs
